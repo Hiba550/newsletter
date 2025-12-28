@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .filter-bar {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .newsletter-card {
+        transition: all 0.15s ease;
+        cursor: pointer;
+    }
+    
+    .newsletter-card:hover {
+        border-color: var(--accent);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    
+    .meta-badge {
+        display: inline-block;
+        padding: 0.3rem 0.6rem;
+        background: var(--surface-2);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        font-size: 0.7rem;
+        font-family: 'JetBrains Mono', monospace;
+        margin-right: 0.4rem;
+        margin-bottom: 0.4rem;
+        color: var(--text-secondary);
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: var(--text-secondary);
+    }
+    
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        color: var(--text-tertiary);
+    }
+    
+    .storage-link {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        text-decoration: none;
+    }
+    
+    .storage-link:hover {
+        color: var(--accent);
+    }
+</style>
+
+{% set newsletters_list = newsletters|list %}
+
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 class="mb-1" style="font-weight: 600; font-size: 1.75rem;">Newsletter Archive</h2>
+                <p class="text-muted mono" style="font-size: 0.875rem;">View and download previous newsletters</p>
+            </div>
+            <div class="d-flex gap-2 align-items-center">
+                <a href="{{ url_for('storage_page') }}" class="storage-link">
+                    <i class="fas fa-hdd me-1"></i>Storage
+                </a>
+                <a href="{{ url_for('index') }}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>New Newsletter
+                </a>
+            </div>
+        </div>
+        
+        <!-- Filters -->
+        <div class="filter-bar">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Department</label>
+                    <select class="form-control" id="filterDepartment">
+                        <option value="">All Departments</option>
+                        {% for dept in departments %}
+                        <option value="{{ dept }}">{{ dept }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Month</label>
+                    <select class="form-control" id="filterMonth">
+                        <option value="">All Months</option>
+                        {% for month in months %}
+                        <option value="{{ month }}">{{ month }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Year</label>
+                    <select class="form-control" id="filterYear">
+                        <option value="">All Years</option>
+                        {% for year in years %}
+                        <option value="{{ year }}">{{ year }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button class="btn btn-outline-primary w-100" onclick="clearFilters()">
+                        Clear Filters
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Newsletter List -->
+        <div id="newsletterList">
+            {% if newsletters_list %}
+            <div class="row g-4">
+                {% for newsletter in newsletters_list %}
+                <div class="col-md-6 col-lg-4 newsletter-item" 
+                     data-department="{{ newsletter.department }}"
+                     data-month="{{ newsletter.month }}"
+                     data-year="{{ newsletter.year }}">
+                    <div class="card newsletter-card h-100">
+                        <div class="card-body">
+                            <h5 class="mb-3" style="font-weight: 600;">{{ newsletter.title }}</h5>
+                            
+                            <div class="mb-3">
+                                <span class="meta-badge">{{ newsletter.department }}</span>
+                                <span class="meta-badge">{{ newsletter.month }} {{ newsletter.year }}</span>
+                                {% if newsletter.volume %}
+                                <span class="meta-badge">{{ newsletter.volume }}</span>
+                                {% endif %}
+                            </div>
+                            
+                            <p class="text-muted mono" style="font-size: 0.75rem; margin-bottom: 1.5rem;">
+                                Generated: {{ newsletter.timestamp.split('T')[0] }}
+                            </p>
+                            
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-outline-primary btn-sm" 
+                                        onclick="previewNewsletter('{{ newsletter.session_id }}')">
+                                    <i class="fas fa-eye me-1"></i> Preview
+                                </button>
+                                <button class="btn btn-primary btn-sm"
+                                        onclick="downloadPDF('{{ newsletter.session_id }}')">
+                                    <i class="fas fa-download me-1"></i> Download PDF
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="fas fa-folder-open"></i>
+                <h5>No Newsletters Yet</h5>
+                <p class="text-muted">Create your first newsletter to get started</p>
+                <a href="{{ url_for('index') }}" class="btn btn-primary mt-3">
+                    Create Newsletter
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Preview Modal -->
+<div class="modal fade" id="previewModal" tabindex="-1">
+    <div class="modal-dialog modal-fullscreen">
+        <div class="modal-content" style="border-radius: 0; border: none;">
+            <div class="modal-header" style="border-bottom: 1px solid var(--border);">
+                <h5 class="modal-title">Newsletter Preview</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0" style="background: var(--bg);">
+                <iframe id="previewFrame" style="width: 100%; height: 100%; border: none;"></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const filterDept = document.getElementById('filterDepartment');
+    const filterMonth = document.getElementById('filterMonth');
+    const filterYear = document.getElementById('filterYear');
+    
+    // Apply filters
+    function applyFilters() {
+        const dept = filterDept.value;
+        const month = filterMonth.value;
+        const year = filterYear.value;
+        
+        const items = document.querySelectorAll('.newsletter-item');
+        let visibleCount = 0;
+        
+        items.forEach(item => {
+            const itemDept = item.dataset.department;
+            const itemMonth = item.dataset.month;
+            const itemYear = item.dataset.year;
+            
+            const deptMatch = !dept || itemDept === dept;
+            const monthMatch = !month || itemMonth === month;
+            const yearMatch = !year || itemYear === year;
+            
+            if (deptMatch && monthMatch && yearMatch) {
+                item.style.display = 'block';
+                visibleCount++;
+            } else {
+                item.style.display = 'none';
+            }
+        });
+        
+        // Show empty state if no results
+        if (visibleCount === 0 && items.length > 0) {
+            document.getElementById('newsletterList').innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-search"></i>
+                    <h5>No Results Found</h5>
+                    <p class="text-muted">Try adjusting your filters</p>
+                </div>
+            `;
+        }
+    }
+    
+    function clearFilters() {
+        filterDept.value = '';
+        filterMonth.value = '';
+        filterYear.value = '';
+        location.reload();
+    }
+    
+    filterDept.addEventListener('change', applyFilters);
+    filterMonth.addEventListener('change', applyFilters);
+    filterYear.addEventListener('change', applyFilters);
+    
+    function previewNewsletter(sessionId) {
+        const iframe = document.getElementById('previewFrame');
+        iframe.src = `/preview/${sessionId}/newsletter.html`;
+        new bootstrap.Modal(document.getElementById('previewModal')).show();
+    }
+    
+    function downloadPDF(sessionId) {
+        const pdfWindow = window.open(`/preview/${sessionId}/newsletter.html`, '_blank');
+        pdfWindow.addEventListener('load', function() {
+            setTimeout(() => pdfWindow.print(), 500);
+        });
+    }
+</script>
+
+{% endblock %}

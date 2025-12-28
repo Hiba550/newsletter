@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row g-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 class="mb-1" style="font-weight: 600; font-size: 1.75rem;">
+                    <i class="fas fa-check-circle me-2" style="color: var(--success);"></i>Newsletter Ready
+                </h2>
+                <p class="text-muted mono" style="font-size: 0.875rem;">Your newsletter has been generated successfully</p>
+            </div>
+            <a href="{{ url_for('index') }}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>New Newsletter
+            </a>
+        </div>
+    </div>
+    
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body p-0">
+                <iframe src="{{ url_for('preview_html', session_id=session_id, filename=html_file) }}" 
+                        style="width: 100%; height: 600px; border: none; border-radius: var(--radius-lg);"></iframe>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card mb-3">
+            <div class="card-body">
+                <h6 style="font-weight: 600; margin-bottom: 1rem; color: var(--text-secondary); font-size: 0.85rem;">
+                    <i class="fas fa-bolt me-2" style="color: var(--accent);"></i>Actions
+                </h6>
+                <div class="d-grid gap-2">
+                    <button onclick="downloadAsPDF()" class="btn btn-primary">
+                        <i class="fas fa-download me-2"></i>Download PDF
+                    </button>
+                    <button onclick="window.open('{{ url_for('preview_html', session_id=session_id, filename=html_file) }}', '_blank')" class="btn btn-outline-primary">
+                        <i class="fas fa-external-link-alt me-2"></i>Open in New Tab
+                    </button>
+                    <a href="{{ url_for('edit_pdf', session_id=session_id, filename=html_file) }}" class="btn btn-outline-primary">
+                        <i class="fas fa-edit me-2"></i>Edit Newsletter
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-body">
+                <h6 style="font-weight: 600; margin-bottom: 1rem; color: var(--text-secondary); font-size: 0.85rem;">
+                    <i class="fas fa-link me-2" style="color: var(--accent);"></i>Quick Links
+                </h6>
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('history') }}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-history me-2"></i>View History
+                    </a>
+                    <a href="{{ url_for('index') }}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-home me-2"></i>Back to Home
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function downloadAsPDF() {
+    const pdfWindow = window.open('{{ url_for("preview_html", session_id=session_id, filename=html_file) }}', '_blank');
+    pdfWindow.addEventListener('load', function() {
+        setTimeout(() => pdfWindow.print(), 500);
+    });
+}
+</script>
+
+{% endblock %}

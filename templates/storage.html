@@ -1,0 +1,354 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .storage-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 1.5rem;
+        text-align: center;
+    }
+    
+    .storage-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text);
+        font-family: 'JetBrains Mono', monospace;
+    }
+    
+    .storage-label {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .newsletter-select-item {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 1rem;
+        margin-bottom: 0.75rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        transition: all 0.15s ease;
+    }
+    
+    .newsletter-select-item:hover {
+        border-color: var(--accent);
+    }
+    
+    .newsletter-select-item.selected {
+        border-color: var(--accent);
+        background: rgba(52, 152, 219, 0.05);
+    }
+    
+    .newsletter-select-item input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        accent-color: var(--accent);
+    }
+    
+    .newsletter-info {
+        flex: 1;
+    }
+    
+    .newsletter-title {
+        font-weight: 600;
+        font-size: 0.95rem;
+        margin-bottom: 0.25rem;
+    }
+    
+    .newsletter-meta {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        font-family: 'JetBrains Mono', monospace;
+    }
+    
+    .action-bar {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 1rem 1.5rem;
+        margin-bottom: 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .select-count {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+    }
+    
+    .danger-zone {
+        margin-top: 2rem;
+        padding-top: 2rem;
+        border-top: 1px solid var(--border);
+    }
+</style>
+
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 class="mb-1" style="font-weight: 600; font-size: 1.75rem;">Storage Management</h2>
+                <p class="text-muted mono" style="font-size: 0.875rem;">Monitor disk usage and clean up old newsletters</p>
+            </div>
+            <a href="{{ url_for('history') }}" class="btn btn-outline-primary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Archive
+            </a>
+        </div>
+        
+        <!-- Storage Stats -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-3">
+                <div class="storage-card">
+                    <div class="storage-value" id="totalStorage">--</div>
+                    <div class="storage-label">Total Used</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="storage-card">
+                    <div class="storage-value" id="generatedStorage">--</div>
+                    <div class="storage-label">Newsletters</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="storage-card">
+                    <div class="storage-value" id="uploadsStorage">--</div>
+                    <div class="storage-label">Uploads</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="storage-card">
+                    <div class="storage-value" id="newsletterCount">--</div>
+                    <div class="storage-label">Total Files</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Action Bar -->
+        <div class="action-bar">
+            <div class="d-flex align-items-center gap-3">
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" id="selectAll" onchange="toggleSelectAll()">
+                    <label class="form-check-label" for="selectAll">Select All</label>
+                </div>
+                <span class="select-count"><span id="selectedCount">0</span> selected</span>
+            </div>
+            <button class="btn btn-danger" id="deleteSelectedBtn" disabled onclick="showDeleteConfirm()">
+                <i class="fas fa-trash me-2"></i>Delete Selected
+            </button>
+        </div>
+        
+        <!-- Newsletter List -->
+        <div id="newsletterList">
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="mt-2 text-muted">Loading newsletters...</p>
+            </div>
+        </div>
+        
+        <!-- Danger Zone -->
+        <div class="danger-zone">
+            <h5 class="text-danger mb-3" style="font-weight: 600;">
+                <i class="fas fa-exclamation-triangle me-2"></i>Danger Zone
+            </h5>
+            <p class="text-muted mb-3" style="font-size: 0.875rem;">
+                These actions cannot be undone. Please proceed with caution.
+            </p>
+            <button class="btn btn-outline-danger" onclick="showDeleteAllConfirm()">
+                <i class="fas fa-trash-alt me-2"></i>Delete All Newsletters
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle text-danger me-2"></i>Confirm Deletion
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p id="deleteMessage">Are you sure you want to delete the selected newsletters?</p>
+                <p class="text-danger mb-0" style="font-size: 0.875rem;">
+                    <strong>Warning:</strong> This action cannot be undone.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
+                    <i class="fas fa-trash me-2"></i>Delete
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let newsletters = [];
+    let deleteModal;
+    let deleteAll = false;
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+        loadStorageInfo();
+        loadNewsletters();
+    });
+    
+    function loadStorageInfo() {
+        fetch('/api/storage')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('totalStorage').textContent = data.total.formatted;
+                    document.getElementById('generatedStorage').textContent = data.generated.formatted;
+                    document.getElementById('uploadsStorage').textContent = data.uploads.formatted;
+                    document.getElementById('newsletterCount').textContent = data.newsletter_count;
+                }
+            })
+            .catch(error => console.error('Error loading storage info:', error));
+    }
+    
+    function loadNewsletters() {
+        fetch('/api/newsletters')
+            .then(response => response.json())
+            .then(data => {
+                newsletters = data;
+                renderNewsletterList();
+            })
+            .catch(error => {
+                document.getElementById('newsletterList').innerHTML = `
+                    <div class="text-center py-5 text-danger">
+                        <i class="fas fa-exclamation-circle fa-2x mb-2"></i>
+                        <p>Error loading newsletters</p>
+                    </div>
+                `;
+            });
+    }
+    
+    function renderNewsletterList() {
+        const container = document.getElementById('newsletterList');
+        
+        if (newsletters.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-5">
+                    <i class="fas fa-folder-open fa-2x mb-2 text-muted"></i>
+                    <p class="text-muted">No newsletters found</p>
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = newsletters.map(n => `
+            <div class="newsletter-select-item" data-session="${n.session_id}">
+                <input type="checkbox" class="newsletter-checkbox" 
+                       value="${n.session_id}" onchange="updateSelection()">
+                <div class="newsletter-info">
+                    <div class="newsletter-title">${n.title || 'Newsletter'}</div>
+                    <div class="newsletter-meta">
+                        ${n.department} • ${n.month} ${n.year} • ${n.timestamp.split('T')[0]}
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    function updateSelection() {
+        const checkboxes = document.querySelectorAll('.newsletter-checkbox:checked');
+        const count = checkboxes.length;
+        document.getElementById('selectedCount').textContent = count;
+        document.getElementById('deleteSelectedBtn').disabled = count === 0;
+        
+        // Update item styling
+        document.querySelectorAll('.newsletter-select-item').forEach(item => {
+            const checkbox = item.querySelector('.newsletter-checkbox');
+            if (checkbox.checked) {
+                item.classList.add('selected');
+            } else {
+                item.classList.remove('selected');
+            }
+        });
+        
+        // Update select all checkbox
+        const allCheckboxes = document.querySelectorAll('.newsletter-checkbox');
+        document.getElementById('selectAll').checked = count === allCheckboxes.length && count > 0;
+    }
+    
+    function toggleSelectAll() {
+        const selectAll = document.getElementById('selectAll').checked;
+        document.querySelectorAll('.newsletter-checkbox').forEach(cb => {
+            cb.checked = selectAll;
+        });
+        updateSelection();
+    }
+    
+    function showDeleteConfirm() {
+        deleteAll = false;
+        const count = document.querySelectorAll('.newsletter-checkbox:checked').length;
+        document.getElementById('deleteMessage').textContent = 
+            `Are you sure you want to delete ${count} selected newsletter(s)?`;
+        document.getElementById('confirmDeleteBtn').onclick = performDelete;
+        deleteModal.show();
+    }
+    
+    function showDeleteAllConfirm() {
+        deleteAll = true;
+        document.getElementById('deleteMessage').textContent = 
+            `Are you sure you want to delete ALL ${newsletters.length} newsletters? This will free up all storage space.`;
+        document.getElementById('confirmDeleteBtn').onclick = performDelete;
+        deleteModal.show();
+    }
+    
+    function performDelete() {
+        let sessionIds;
+        
+        if (deleteAll) {
+            sessionIds = newsletters.map(n => n.session_id);
+        } else {
+            sessionIds = Array.from(document.querySelectorAll('.newsletter-checkbox:checked'))
+                .map(cb => cb.value);
+        }
+        
+        if (sessionIds.length === 0) return;
+        
+        document.getElementById('confirmDeleteBtn').disabled = true;
+        document.getElementById('confirmDeleteBtn').innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Deleting...';
+        
+        fetch('/api/delete-newsletters', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({session_ids: sessionIds})
+        })
+        .then(response => response.json())
+        .then(data => {
+            deleteModal.hide();
+            if (data.success) {
+                // Reload data
+                loadStorageInfo();
+                loadNewsletters();
+                document.getElementById('selectedCount').textContent = '0';
+                document.getElementById('deleteSelectedBtn').disabled = true;
+                document.getElementById('selectAll').checked = false;
+            } else {
+                alert('Error deleting newsletters: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Error: ' + error.message);
+        })
+        .finally(() => {
+            document.getElementById('confirmDeleteBtn').disabled = false;
+            document.getElementById('confirmDeleteBtn').innerHTML = '<i class="fas fa-trash me-2"></i>Delete';
+        });
+    }
+</script>
+{% endblock %}

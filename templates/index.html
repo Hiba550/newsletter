@@ -1,0 +1,270 @@
+{% extends "base.html" %} {% block content %}
+<div class="row g-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-body">
+        <div class="mb-4">
+          <h2 class="card-title">Upload Files</h2>
+          <p class="text-muted" style="font-size: 0.875rem">
+            Upload newsletter data and images
+          </p>
+        </div>
+
+        <form
+          action="{{ url_for('upload_files') }}"
+          method="post"
+          enctype="multipart/form-data"
+          id="uploadForm"
+        >
+          <div class="row g-4">
+            <div class="col-md-6">
+              <div class="file-upload-area" id="excelDropZone">
+                <div class="upload-icon">
+                  <i class="fas fa-file-excel"></i>
+                </div>
+                <h5>Excel File</h5>
+                <p class="text-muted mb-3" style="font-size: 0.875rem">
+                  Drag & drop or click to browse
+                </p>
+                <input
+                  type="file"
+                  class="form-control"
+                  name="excel_file"
+                  id="excelFile"
+                  accept=".xlsx,.xls"
+                  required
+                  style="display: none"
+                />
+                <button
+                  type="button"
+                  class="btn btn-outline-primary btn-sm"
+                  onclick="document.getElementById('excelFile').click()"
+                >
+                  Browse Files
+                </button>
+                <div id="excelFileName" class="mt-3" style="display: none">
+                  <span class="badge bg-success mono"
+                    ><i class="fas fa-check me-1"></i
+                    ><span id="excelName"></span
+                  ></span>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-6">
+              <div class="file-upload-area" id="imageDropZone">
+                <div class="upload-icon">
+                  <i class="fas fa-images"></i>
+                </div>
+                <h5>Images</h5>
+                <p class="text-muted mb-3" style="font-size: 0.875rem">
+                  Drag & drop or click to browse
+                </p>
+                <input
+                  type="file"
+                  class="form-control"
+                  name="image_files"
+                  id="imageFiles"
+                  multiple
+                  accept=".png,.jpg,.jpeg,.gif"
+                  style="display: none"
+                />
+                <button
+                  type="button"
+                  class="btn btn-outline-primary btn-sm"
+                  onclick="document.getElementById('imageFiles').click()"
+                >
+                  Browse Files
+                </button>
+                <div id="imageFileCount" class="mt-3" style="display: none">
+                  <span class="badge bg-success mono"
+                    ><i class="fas fa-check me-1"></i
+                    ><span id="imageCount"></span> files</span
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="info-box mt-4">
+            <div
+              class="d-flex justify-content-between align-items-center flex-wrap gap-3"
+            >
+              <p class="mb-0">
+                <strong>Need a template?</strong>
+                <span class="ms-2">
+                  <a
+                    href="{{ url_for('download_enhanced_sample') }}"
+                    class="mono"
+                    style="text-decoration: none; color: var(--text)"
+                    >Here</a
+                  >
+                </span>
+              </p>
+            </div>
+          </div>
+
+          <input type="hidden" name="template" value="default" />
+
+          <div class="mt-4">
+            <button
+              type="submit"
+              class="btn btn-primary"
+              id="generateBtn"
+              disabled
+            >
+              Generate Newsletter
+            </button>
+          </div>
+
+          <div id="progressContainer" class="mt-4" style="display: none">
+            <div class="progress">
+              <div
+                class="progress-bar progress-bar-striped progress-bar-animated"
+                role="progressbar"
+                style="width: 100%"
+              ></div>
+            </div>
+            <p class="text-muted mt-2 mono" style="font-size: 0.75rem">
+              Processing...
+            </p>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="card mt-4">
+      <div class="card-body">
+        <h5
+          class="mb-3"
+          style="
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+          "
+        >
+          <i class="fas fa-list-ol me-2" style="color: var(--accent)"></i
+          >Instructions
+        </h5>
+        <ol
+          style="
+            font-size: 0.85rem;
+            line-height: 2;
+            padding-left: 1.25rem;
+            color: var(--text-secondary);
+            margin: 0;
+          "
+        >
+          <li>Download Excel template</li>
+          <li>Fill in newsletter data</li>
+          <li>Upload Excel file and referenced images</li>
+          <li>Click Generate Newsletter</li>
+          <li>Download or edit the generated PDF</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block scripts %}
+<script>
+  const excelFile = document.getElementById("excelFile");
+  const imageFiles = document.getElementById("imageFiles");
+  const generateBtn = document.getElementById("generateBtn");
+  const uploadForm = document.getElementById("uploadForm");
+  const progressContainer = document.getElementById("progressContainer");
+
+  const excelDropZone = document.getElementById("excelDropZone");
+  const imageDropZone = document.getElementById("imageDropZone");
+
+  excelFile.addEventListener("change", function () {
+    if (this.files.length > 0) {
+      document.getElementById("excelName").textContent = this.files[0].name;
+      document.getElementById("excelFileName").style.display = "block";
+      checkFormReady();
+    }
+  });
+
+  imageFiles.addEventListener("change", function () {
+    if (this.files.length > 0) {
+      document.getElementById("imageCount").textContent = this.files.length;
+      document.getElementById("imageFileCount").style.display = "block";
+    }
+    checkFormReady();
+  });
+
+  function checkFormReady() {
+    if (excelFile.files.length > 0) {
+      generateBtn.disabled = false;
+    }
+  }
+
+  // Drag and drop
+  function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  [excelDropZone, imageDropZone].forEach((zone) => {
+    ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
+      zone.addEventListener(eventName, preventDefaults, false);
+    });
+  });
+
+  ["dragenter", "dragover"].forEach((eventName) => {
+    excelDropZone.addEventListener(
+      eventName,
+      () => excelDropZone.classList.add("dragover"),
+      false
+    );
+    imageDropZone.addEventListener(
+      eventName,
+      () => imageDropZone.classList.add("dragover"),
+      false
+    );
+  });
+
+  ["dragleave", "drop"].forEach((eventName) => {
+    excelDropZone.addEventListener(
+      eventName,
+      () => excelDropZone.classList.remove("dragover"),
+      false
+    );
+    imageDropZone.addEventListener(
+      eventName,
+      () => imageDropZone.classList.remove("dragover"),
+      false
+    );
+  });
+
+  excelDropZone.addEventListener("drop", function (e) {
+    const files = e.dataTransfer.files;
+    if (
+      files.length > 0 &&
+      (files[0].name.endsWith(".xlsx") || files[0].name.endsWith(".xls"))
+    ) {
+      excelFile.files = files;
+      excelFile.dispatchEvent(new Event("change"));
+    }
+  });
+
+  imageDropZone.addEventListener("drop", function (e) {
+    const files = e.dataTransfer.files;
+    imageFiles.files = files;
+    imageFiles.dispatchEvent(new Event("change"));
+  });
+
+  excelDropZone.addEventListener("click", function (e) {
+    if (e.target.tagName !== "BUTTON") excelFile.click();
+  });
+
+  imageDropZone.addEventListener("click", function (e) {
+    if (e.target.tagName !== "BUTTON") imageFiles.click();
+  });
+
+  uploadForm.addEventListener("submit", function (e) {
+    generateBtn.innerHTML = "Generating...";
+    generateBtn.disabled = true;
+    progressContainer.style.display = "block";
+  });
+</script>
+{% endblock %}
